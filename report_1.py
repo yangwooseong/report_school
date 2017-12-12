@@ -47,55 +47,46 @@ def initial_lower_bound(process, due):
 relax = 0
 delay = 0
 solve_count = 0
-step = 1
+step = 0
 provisional = initial_lower_bound(process, due)
 
 # the recursive funtion for solution will return this dictionary
-sol_dict = {'provisional' : provisional, 'sol' : sol}
+sol_dict = {'provisional' : provisional, 'sol' : sol, 'step' : step}
 
-def branch_bound(data, total, relax, solve_count, branch, sol, sol_dict, step):
+def branch_bound(data, total, relax, branch, sol, sol_dict):
     provisional = sol_dict['provisional']
     sol = sol_dict['sol']
 
     rest = data.shape[1]
     for i in range(rest):
-        tmp_data = np.copy(data)
         tmp_total = total
-        tmp_total2 = tmp_total - data[1][i]
         # relaxation problem
         tmp_relax = relax + max(tmp_total - data[2][i], 0)
-        tmp_branch = np.copy(branch)
-        tmp_branch[TASK_N - rest] = data[0][i]
-        # delete i task
-        tmp_data = np.delete(tmp_data, i, axis=1)
-        step += 1
-        # select i task and go deeper if provisional solution >= lower bound
-        if solve_count == 0:
-            # if provisional solution is bigger than lower bound, go deeper
-            if(provisional >= tmp_relax):
-                solve_count = 1
-                branch_bound(tmp_data, tmp_total2, tmp_relax, solve_count, tmp_branch, sol, sol_dict, step)
-
-        else:
-            # if provisional solution is bigger than lower bound, go deeper
-            if(provisional >= tmp_relax):
-                if(tmp_data.shape[1] == 1):
-                    tmp_relax_final = relax + max(tmp_total2 - data[2][i], 0)
-                    tmp_branch[-1] = tmp_data[0][0]
-                    if(provisional > tmp_relax_final):
-                        sol_dict['provisional'] = tmp_relax_final
-                        sol_dict['sol'] = list(tmp_branch.tolist())
-                        print(sol_dict['provisional'])
-                        print(sol_dict['sol'])
-                    elif(provisional == tmp_relax_final):
-                        sol_dict['sol'].append(tmp_branch.tolist())
-                        print(sol_dict['provisional'])
-                        print(sol_dict['sol'])
-                else:
-                    branch_bound(tmp_data, tmp_total2, tmp_relax, solve_count, tmp_branch, sol, sol_dict, step)
-    solve_count = 0
-    return step
+        sol_dict['step'] += 1
+        # select i task and go deeper only if provisional solution >= lower bound
+        # if provisional solution is bigger than lower bound, go deeper
+        if(provisional >= tmp_relax):
+            tmp_data = np.copy(data)
+            tmp_total2 = tmp_total - data[1][i]
+            tmp_branch = np.copy(branch)
+            tmp_branch[TASK_N - rest] = data[0][i]
+            # delete i task
+            tmp_data = np.delete(tmp_data, i, axis=1)
+            if(tmp_data.shape[1] == 1):
+                tmp_relax_final = tmp_relax + max(tmp_total2 - data[2][i], 0)
+                tmp_branch[-1] = tmp_data[0][0]
+                if(provisional > tmp_relax_final):
+                    sol_dict['provisional'] = tmp_relax_final
+                    sol_dict['sol'] = list(tmp_branch.tolist())
+                    print(sol_dict['provisional'])
+                    print(sol_dict['sol'])
+                elif(provisional == tmp_relax_final):
+                    sol_dict['sol'].append(tmp_branch.tolist())
+                    print(sol_dict['provisional'])
+                    print(sol_dict['sol'])
+            branch_bound(tmp_data, tmp_total2, tmp_relax, tmp_branch, sol, sol_dict)
+    return sol_dict['step']
 
 print('searching the solution by branch and bound strategy...')
-branch_bound(data, total, relax, solve_count, branch, sol, sol_dict, step)
+print(branch_bound(data, total, relax, branch, sol, sol_dict))
 print('searching finished!')
